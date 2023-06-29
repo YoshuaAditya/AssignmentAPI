@@ -1,58 +1,90 @@
 package com.example.assignmentapi
 
-import android.os.Bundle
-import com.google.android.material.snackbar.Snackbar
 import androidx.appcompat.app.AppCompatActivity
-import androidx.navigation.findNavController
-import androidx.navigation.ui.AppBarConfiguration
-import androidx.navigation.ui.navigateUp
-import androidx.navigation.ui.setupActionBarWithNavController
-import android.view.Menu
-import android.view.MenuItem
+import android.os.Bundle
+import androidx.databinding.DataBindingUtil
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.assignmentapi.databinding.ActivityMainBinding
+import com.example.assignmentapi.objects.Exclusion
+import com.example.assignmentapi.objects.Exclusions
+import com.example.assignmentapi.objects.Facilities
+import com.example.assignmentapi.objects.Facility
+import com.example.assignmentapi.network.APIClient
+import com.example.assignmentapi.network.ApiInterface
+import com.example.assignmentapi.network.RecyclerAdapter
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
+import java.util.concurrent.TimeUnit
 
 class MainActivity : AppCompatActivity() {
-
-    private lateinit var appBarConfiguration: AppBarConfiguration
-    private lateinit var binding: ActivityMainBinding
+    var facilityList = mutableListOf<Facility>()
+    var exclusionList = mutableListOf<MutableList<Exclusion>>()
+    private lateinit var databinding: ActivityMainBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        databinding = DataBindingUtil.setContentView(this, R.layout.activity_main)
 
-        binding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(binding.root)
-
-        setSupportActionBar(binding.toolbar)
-
-        val navController = findNavController(R.id.nav_host_fragment_content_main)
-        appBarConfiguration = AppBarConfiguration(navController.graph)
-        setupActionBarWithNavController(navController, appBarConfiguration)
-
-        binding.fab.setOnClickListener { view ->
-            Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                .setAction("Action", null).show()
+        val isDayPassed = (System.currentTimeMillis() - Exclusions.date) >= TimeUnit.DAYS.toMillis(1)
+        println(Exclusions.exclusions.isEmpty()|| isDayPassed)
+        if(Exclusions.exclusions.isEmpty()|| isDayPassed){
+            Exclusions.exclusions.clear()
+            Facilities.facilities.clear()
+            println("day changed or empty")
+            Exclusions.date=System.currentTimeMillis()
+            getExclusions()
+        }
+        else{
+            populateRecyclerView()
         }
     }
 
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        menuInflater.inflate(R.menu.menu_main, menu)
-        return true
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        return when (item.itemId) {
-            R.id.action_settings -> true
-            else -> super.onOptionsItemSelected(item)
+    private fun populateRecyclerView() {
+        Facilities.facilities.map {
+            facilityList.add(Facility(it.facility_id,it.name,it.options))
         }
+        exclusionList=Exclusions.exclusions.toMutableList()
+        val adapter = RecyclerAdapter(facilityList,exclusionList)
+        databinding.recyclerView.layoutManager = LinearLayoutManager(this@MainActivity)
+        databinding.recyclerView.adapter = adapter
     }
 
-    override fun onSupportNavigateUp(): Boolean {
-        val navController = findNavController(R.id.nav_host_fragment_content_main)
-        return navController.navigateUp(appBarConfiguration)
-                || super.onSupportNavigateUp()
+    private fun getExclusions() {
+        val client = APIClient().getRetrofitClient().create(ApiInterface::class.java)
+        client.getExclusions().enqueue(object : Callback<MutableList<MutableList<Exclusion>>> {
+            override fun onResponse(
+                call: Call<MutableList<MutableList<Exclusion>>>,
+                response: Response<MutableList<MutableList<Exclusion>>>
+            ) {
+                // Used for inserting data in MutableList of type Facility
+                Exclusions.exclusions.addAll(response.body()!!)
+                getFacilities()
+            }
+
+            override fun onFailure(call: Call<MutableList<MutableList<Exclusion>>>, t: Throwable) {
+                println(t)
+            }
+
+        })
+    }
+
+    private fun getFacilities() {
+        val client = APIClient().getRetrofitClient().create(ApiInterface::class.java)
+        client.getFacilities().enqueue(object : Callback<MutableList<Facility>> {
+            override fun onResponse(
+                call: Call<MutableList<Facility>>,
+                response: Response<MutableList<Facility>>
+            ) {
+                // Used for inserting data in MutableList of type Facility
+                Facilities.facilities.addAll(response.body()!!)
+                populateRecyclerView()
+            }
+
+            override fun onFailure(call: Call<MutableList<Facility>>, t: Throwable) {
+                println(t)
+            }
+
+        })
     }
 }
