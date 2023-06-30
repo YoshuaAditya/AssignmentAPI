@@ -23,7 +23,7 @@
                 android:textSize="17sp"
                 android:textStyle="bold"
                 android:textColor="@color/black"
-                android:text="I am not in danger, Skyler. I am the danger!"></TextView>
+                android:text="Facility"/>
 
             <Spinner
                 android:id="@+id/spinner"

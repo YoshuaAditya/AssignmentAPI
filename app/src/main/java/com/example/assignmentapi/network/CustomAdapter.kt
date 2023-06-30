@@ -29,8 +29,10 @@ class CustomAdapter(
         val view = LayoutInflater.from(context)
             .inflate(R.layout.layout_spinner_items, parent, false)
         view.findViewById<TextView>(R.id.option_name).text = getItem(position)?.name
-        val id = context.resources.getIdentifier(getItem(position)?.icon, "drawable", context.packageName);
-        view.findViewById<ImageView>(R.id.option_image).setImageResource(id)
+        getItem(position)?.apply {
+            val id = context.resources.getIdentifier(this.icon.replace("-","_"), "drawable", context.packageName)
+            view.findViewById<ImageView>(R.id.option_image).setImageResource(id)
+        }
         return view
     }
 //    = ImageView(context).apply {

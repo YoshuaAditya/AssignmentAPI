@@ -18,20 +18,15 @@ import retrofit2.Response
 import java.util.concurrent.TimeUnit
 
 class MainActivity : AppCompatActivity() {
-    var facilityList = mutableListOf<Facility>()
-    var exclusionList = mutableListOf<MutableList<Exclusion>>()
     private lateinit var databinding: ActivityMainBinding
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         databinding = DataBindingUtil.setContentView(this, R.layout.activity_main)
 
         val isDayPassed = (System.currentTimeMillis() - Exclusions.date) >= TimeUnit.DAYS.toMillis(1)
-        println(Exclusions.exclusions.isEmpty()|| isDayPassed)
         if(Exclusions.exclusions.isEmpty()|| isDayPassed){
             Exclusions.exclusions.clear()
             Facilities.facilities.clear()
-            println("day changed or empty")
             Exclusions.date=System.currentTimeMillis()
             getExclusions()
         }
@@ -41,11 +36,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun populateRecyclerView() {
-        Facilities.facilities.map {
-            facilityList.add(Facility(it.facility_id,it.name,it.options))
-        }
-        exclusionList=Exclusions.exclusions.toMutableList()
-        val adapter = RecyclerAdapter(facilityList,exclusionList)
+        val adapter = RecyclerAdapter(Facilities.facilities,Exclusions.exclusions)
         databinding.recyclerView.layoutManager = LinearLayoutManager(this@MainActivity)
         databinding.recyclerView.adapter = adapter
     }
@@ -61,11 +52,9 @@ class MainActivity : AppCompatActivity() {
                 Exclusions.exclusions.addAll(response.body()!!)
                 getFacilities()
             }
-
             override fun onFailure(call: Call<MutableList<MutableList<Exclusion>>>, t: Throwable) {
                 println(t)
             }
-
         })
     }
 
@@ -76,15 +65,12 @@ class MainActivity : AppCompatActivity() {
                 call: Call<MutableList<Facility>>,
                 response: Response<MutableList<Facility>>
             ) {
-                // Used for inserting data in MutableList of type Facility
                 Facilities.facilities.addAll(response.body()!!)
                 populateRecyclerView()
             }
-
             override fun onFailure(call: Call<MutableList<Facility>>, t: Throwable) {
                 println(t)
             }
-
         })
     }
 }
